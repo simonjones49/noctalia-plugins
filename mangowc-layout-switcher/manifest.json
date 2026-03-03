@@ -21,6 +21,8 @@
     "plugins": []
   },
   "metadata": {
-    "defaultSettings": {}
+    "defaultSettings": {
+      "monitorOrder": []
+    }
   }
 }
