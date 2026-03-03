@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import qs.Commons
+import qs.Services.UI
 import qs.Widgets
 
 Item {
@@ -9,7 +10,10 @@ Item {
 
   property var pluginApi: null
   property ShellScreen currentScreen
-  readonly property var geometryPlaceholder: panelContainer
+  readonly property var geometryPlaceholder: root
+  readonly property bool allowAttach: true
+
+  anchors.fill: parent
 
   // ===== DATA & MAPPING =====
 
@@ -66,25 +70,21 @@ Item {
 
   // ===== UI =====
 
-  Item {
-    id: panelContainer
+  // Background Click Catcher (Closes Panel)
+  MouseArea {
     anchors.fill: parent
-
-    // Background Click Catcher (Closes Panel)
-    MouseArea {
-      anchors.fill: parent
-      onClicked: {
-        if (pluginApi) {
-          pluginApi.closePanel()
-        }
+    onClicked: {
+      if (pluginApi) {
+        pluginApi.closePanel()
       }
     }
+  }
 
-    // Panel Window Surface
-    Rectangle {
-      width: root.contentPreferredWidth
-      height: root.contentPreferredHeight
-      anchors.centerIn: parent
+  // Panel Window Surface
+  Rectangle {
+    anchors.centerIn: parent
+    width: root.contentPreferredWidth
+    height: root.contentPreferredHeight
       
       color: Color.mSurface
       radius: Style.radiusL
@@ -157,7 +157,6 @@ Item {
           Layout.fillWidth: true
           spacing: Style.marginS
           
-          // NEW: Reduce opacity and disable interactions when Apply to All is checked
           opacity: root.applyToAll ? 0.6 : 1.0
           enabled: !root.applyToAll
 
@@ -179,7 +178,6 @@ Item {
                 width: monitorContent.implicitWidth + (Style.marginM * 2)
                 height: 36 * Style.uiScaleRatio
                 
-                // NEW: Show as selected if individually picked OR if Apply to All is active
                 property bool isSelected: root.applyToAll || root.selectedMonitors.includes(modelData)
                 
                 property string currentLayout: {
@@ -308,4 +306,4 @@ Item {
       }
     }
   }
-}
+
