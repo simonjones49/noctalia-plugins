@@ -1,33 +1,36 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import qs.Commons
-import qs.Widgets
 import qs.Services.UI
+import qs.Widgets
 
-Rectangle {
+NIconButton {
   id: root
 
   property var pluginApi: null
   property ShellScreen screen
   property string widgetId: ""
   property string section: ""
-  property bool hovered: false
 
-  readonly property string barPosition: Settings.data.bar.position
-  readonly property bool isVertical: barPosition === "left" || barPosition === "right"
+  property int fanState: -1
 
-  implicitWidth: isVertical ? Style.capsuleHeight : layout.implicitWidth + Style.marginS * 2
-  implicitHeight: isVertical ? layout.implicitHeight + Style.marginS * 2 : Style.capsuleHeight
+  icon: getIcon()
+  tooltipText: getTooltipText()
+  tooltipDirection: BarService.getTooltipDirection(screen?.name)
+  baseSize: Style.getCapsuleHeightForScreen(screen?.name)
+  applyUiScale: false
+  customRadius: Style.radiusL
 
-  color: root.hovered ? Color.mHover : Style.capsuleColor
-  radius: Style.radiusM
+  colorBg: Style.capsuleColor
+  colorFg: getColor()
+  colorBgHover: Color.mHover
+  colorFgHover: Color.mOnHover
+  colorBorder: "transparent"
+  colorBorderHover: "transparent"
+
   border.color: Style.capsuleBorderColor
   border.width: Style.capsuleBorderWidth
-  
-  property int fanState: -1
-  
+
   Component.onCompleted: {
     if (pluginApi?.mainInstance) {
       root.fanState = pluginApi.mainInstance.fanState;
@@ -58,7 +61,7 @@ Rectangle {
       pluginApi.mainInstance.setFanState(value);
     }
   }
-  
+
   function getTooltipText() {
     switch (fanState) {
     case 0:
@@ -104,44 +107,8 @@ Rectangle {
     }
   }
 
-  Item {
-    id: layout
-    anchors.centerIn: parent
-
-    implicitWidth: contentRow.implicitWidth
-    implicitHeight: contentRow.implicitHeight
-
-    RowLayout {
-      id: contentRow
-      anchors.centerIn: parent
-      // Optical alignment bs
-      anchors.horizontalCenterOffset: -0.25
-
-      NIcon {
-        icon: getIcon()
-        color: root.hovered ? Color.mOnHover : getColor()
-      }
-    }
-
-    MouseArea {
-      anchors.fill: parent
-      hoverEnabled: true
-      cursorShape: root.pluginApi?.mainInstance?.updateCount > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
-
-      onClicked: {
-          Logger.i("ASUS Fan State Widget", `Clicked, current fanState: ${fanState}`);
-          setFanState((fanState + 1) % 4);
-      }
-
-      onEntered: {
-        root.hovered = true;
-        TooltipService.show(root, getTooltipText(), BarService.getTooltipDirection());
-      }
-
-      onExited: {
-        root.hovered = false;
-        TooltipService.hide();
-      }
-    }
+  onClicked: {
+    Logger.i("ASUS Fan State Widget", `Clicked, current fanState: ${fanState}`);
+    setFanState((fanState + 1) % 4);
   }
 }
