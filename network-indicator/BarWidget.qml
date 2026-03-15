@@ -113,6 +113,8 @@ NIconButton {
         }
     }
 
+    // ---------- Interaction ----------
+
     onRightClicked: {
         var popupMenuWindow = PanelService.getPopupMenuWindow(screen);
         if (popupMenuWindow) {
@@ -120,8 +122,6 @@ NIconButton {
             contextMenu.openAtItem(root, screen);
         }
     }
-
-    // ---------- Interaction ----------
 
     NPopupContextMenu {
         id: contextMenu
