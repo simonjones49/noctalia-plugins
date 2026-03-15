@@ -15,7 +15,13 @@ A floating OSD plugin for Noctalia Shell that displays keyboard input in real-ti
 
 ## Prerequisites
 
-This plugin relies on `evtest` to read hardware input directly. You must install it and configure user permissions to allow your shell to read the even.
+This plugin relies on `evtest` to read hardware input directly. That means it needs access to `/dev/input/event*`, which comes with an explicit security tradeoff.
+
+### Security Notice
+
+Granting your user access to the `input` group weakens Wayland's input confidentiality model. Once your user can read raw input devices directly, any process running as that user may also be able to observe keyboard input outside the compositor's usual security boundaries.
+
+Use this plugin only if you understand and accept that tradeoff. If you are not comfortable granting `input` access, do not enable this plugin until a compositor-native or otherwise safer input API exists.
 
 1.  **Install evtest** (for Arch Linux):
     ```bash
@@ -27,6 +33,7 @@ This plugin relies on `evtest` to read hardware input directly. You must install
     ```bash
     sudo usermod -aG input $USER
     ```
+    *(Warning: this is convenient, but it also grants raw input device access to processes running as your user.)*
     *(Note: You must log out and log back in, or reboot, for this group change to take effect.)*
 
 3.  **Find your keyboard device path**:

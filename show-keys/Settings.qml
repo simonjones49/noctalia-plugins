@@ -78,6 +78,61 @@ ColumnLayout {
         }
     }
 
+    // ── Security Notice ─────────────────────────────────
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: securityCol.implicitHeight + Style.marginM * 2
+        color: Qt.alpha(Color.mError, 0.12)
+        border.color: Qt.alpha(Color.mError, 0.32)
+        border.width: 1
+        radius: Style.radiusM
+
+        ColumnLayout {
+            id: securityCol
+            anchors {
+                fill: parent
+                margins: Style.marginM
+            }
+            spacing: Style.marginS
+
+            RowLayout {
+                spacing: Style.marginS
+
+                NIcon {
+                    icon: "exclamation-circle"
+                    pointSize: Style.fontSizeS
+                    color: Color.mError
+                }
+
+                NText {
+                    text: pluginApi?.tr("settings.security.title")
+                    pointSize: Style.fontSizeS
+                    font.weight: Font.Medium
+                    color: Color.mError
+                }
+            }
+
+            NText {
+                Layout.fillWidth: true
+                text: pluginApi?.tr("settings.security.message")
+                pointSize: Style.fontSizeXS
+                color: Color.mOnSurfaceVariant
+                wrapMode: Text.Wrap
+                lineHeight: 1.2
+            }
+
+            NText {
+                Layout.fillWidth: true
+                text: pluginApi?.tr("settings.security.disclaimer")
+                pointSize: Style.fontSizeXS
+                font.weight: Font.Medium
+                color: Color.mError
+                wrapMode: Text.Wrap
+                lineHeight: 1.2
+            }
+        }
+    }
+
     NDivider {
         Layout.fillWidth: true
         Layout.topMargin: Style.marginS
