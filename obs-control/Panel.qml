@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Widgets
 import "I18n.js" as I18n
+import "Ui.js" as Ui
 
 Item {
   id: root
@@ -16,25 +17,27 @@ Item {
   readonly property bool websocket: Boolean(service && service.websocket)
   readonly property bool recording: Boolean(service && service.recording)
   readonly property bool replayBuffer: Boolean(service && service.replayBuffer)
+  readonly property bool streaming: Boolean(service && service.streaming)
   readonly property int recordDurationMs: Number(service && service.displayRecordDurationMs ? service.displayRecordDurationMs : 0)
+  readonly property int streamDurationMs: Number(service && service.displayStreamDurationMs ? service.displayStreamDurationMs : 0)
   readonly property bool connected: obsRunning && websocket
+  readonly property bool autoCloseManagedObs: Boolean(service && service.autoCloseManagedObs)
+  readonly property string primaryActionText: service ? service.primaryActionText : "opens controls"
+  readonly property var outputState: ({
+    recording: recording,
+    replayBuffer: replayBuffer,
+    streaming: streaming,
+    recordDurationMs: recordDurationMs,
+    streamDurationMs: streamDurationMs,
+  })
 
   function tr(key, fallback, interpolations) {
     return I18n.tr(pluginApi, key, fallback, interpolations)
   }
 
-  function formatDuration(durationMs) {
-    const totalSeconds = Math.max(0, Math.floor(durationMs / 1000))
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
-
-    if (hours > 0) {
-      return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
-    }
-
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
-  }
+  readonly property bool hasActiveOutputs: Ui.hasActiveOutputs(outputState)
+  readonly property string activeOutputSummary: Ui.activeOutputSummary(tr, outputState, Color, " + ")
+  readonly property color statusAccentColor: Ui.accentBackgroundColor(outputState, Color, Color.mOnSurface)
 
   property bool allowAttach: true
   property real contentPreferredWidth: Math.round(372 * Style.uiScaleRatio)
@@ -82,21 +85,7 @@ Item {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
             color: Color.mOnSurfaceVariant
-            text: {
-              if (recording) {
-                return root.tr("panel.header.recording", "Recording is active. Stop the capture or manage replay actions from here.");
-              }
-              if (replayBuffer) {
-                return root.tr("panel.header.replay", "Replay buffer is active. Save the latest replay at any time.");
-              }
-              if (connected) {
-                return root.tr("panel.header.ready", "OBS is connected and ready for recording or replay.");
-              }
-              if (obsRunning) {
-                return root.tr("panel.header.needs_restart", "OBS is open, but WebSocket control is unavailable until it is restarted once.");
-              }
-              return root.tr("panel.header.offline", "OBS is offline. Launch it here and the widget will track its state.");
-            }
+            text: Ui.panelHeaderText(root.tr, root.outputState, Color, connected, obsRunning)
           }
         }
       }
@@ -115,18 +104,9 @@ Item {
 
           NText {
             Layout.fillWidth: true
-            text: root.tr("panel.status.label", "Status") + ": " +
-                  (recording
-                    ? root.tr("panel.status.recording", "Recording")
-                    : (replayBuffer
-                        ? root.tr("panel.status.replay", "Replay Buffer")
-                        : (connected
-                            ? root.tr("panel.status.ready", "Ready")
-                            : (obsRunning
-                                ? root.tr("panel.status.needs_restart", "Needs OBS Restart")
-                                : root.tr("panel.status.offline", "Offline")))))
+            text: root.tr("panel.status.label", "Status") + ": " + Ui.panelStatusText(root.tr, root.outputState, Color, connected, obsRunning)
             font.weight: Style.fontWeightSemiBold
-            color: recording ? Color.mError : (replayBuffer ? Color.mSecondary : Color.mOnSurface)
+            color: statusAccentColor
           }
 
           NText {
@@ -134,16 +114,34 @@ Item {
             wrapMode: Text.WordWrap
             color: Color.mOnSurfaceVariant
             text: websocket
-                  ? root.tr("panel.status.connected_hint", "The bar indicator follows recording state. Left click opens this panel, right click toggles recording, and middle click toggles replay.")
+                  ? root.tr("panel.status.connected_hint", "Left click {primaryAction}. Right click toggles recording, middle click toggles replay, and the panel exposes streaming and save actions.", {
+                      primaryAction: primaryActionText
+                    })
                   : root.tr("panel.status.disconnected_hint", "WebSocket control is unavailable right now. Launch or restart OBS to restore quick actions.")
           }
 
           NText {
             Layout.fillWidth: true
             visible: recording && recordDurationMs > 0
-            text: root.tr("panel.status.elapsed", "Elapsed") + ": " + root.formatDuration(recordDurationMs)
+            text: root.tr("panel.status.recording_elapsed", "Recording Time") + ": " + Ui.formatDuration(recordDurationMs)
             font.weight: Style.fontWeightMedium
             color: Color.mOnSurface
+          }
+
+          NText {
+            Layout.fillWidth: true
+            visible: streaming && streamDurationMs > 0
+            text: root.tr("panel.status.streaming_elapsed", "Streaming Time") + ": " + Ui.formatDuration(streamDurationMs)
+            font.weight: Style.fontWeightMedium
+            color: Color.mOnSurface
+          }
+
+          NText {
+            Layout.fillWidth: true
+            visible: autoCloseManagedObs
+            wrapMode: Text.WordWrap
+            color: Color.mOnSurfaceVariant
+            text: root.tr("panel.status.managed_hint", "Plugin-managed launches can close OBS after the last active recording, replay, or stream stops.")
           }
         }
       }
@@ -157,10 +155,12 @@ Item {
         NButton {
           Layout.fillWidth: true
           icon: obsRunning ? "refresh" : "player-play"
-          text: obsRunning
-                ? root.tr("panel.actions.refresh_obs", "Refresh OBS")
-                : root.tr("panel.actions.launch_obs", "Launch OBS")
-          enabled: !obsRunning || !websocket
+          text: !obsRunning
+                ? root.tr("panel.actions.launch_obs", "Launch OBS")
+                : root.tr("panel.actions.retry_connection", "Retry Connection")
+          visible: !connected
+          enabled: (!obsRunning || !websocket) && !actionBusy
+          property bool actionBusy: Boolean(service && service.pendingAction !== "")
           onClicked: {
             if (!service) {
               return;
@@ -183,6 +183,18 @@ Item {
           backgroundColor: recording ? Color.mError : Color.mPrimary
           textColor: recording ? Color.mOnError : Color.mOnPrimary
           onClicked: service && service.toggleRecord()
+        }
+
+        NButton {
+          Layout.fillWidth: true
+          icon: "antenna-bars-5"
+          text: streaming
+                ? root.tr("panel.actions.stop_streaming", "Stop Streaming")
+                : root.tr("panel.actions.start_streaming", "Start Streaming")
+          enabled: connected
+          backgroundColor: streaming ? Color.mPrimary : Color.mSurfaceVariant
+          textColor: streaming ? Color.mOnPrimary : Color.mOnSurface
+          onClicked: service && service.toggleStream()
         }
 
         NButton {
@@ -213,14 +225,14 @@ Item {
           outlined: true
           onClicked: service && service.openVideos()
         }
-      }
 
-      NButton {
-        Layout.fillWidth: true
-        icon: "refresh"
-        text: root.tr("panel.actions.refresh_status", "Refresh Status")
-        outlined: true
-        onClicked: service && service.refresh()
+        NButton {
+          Layout.fillWidth: true
+          icon: "refresh"
+          text: root.tr("panel.actions.refresh_status", "Refresh Status")
+          outlined: true
+          onClicked: service && service.refresh()
+        }
       }
     }
   }

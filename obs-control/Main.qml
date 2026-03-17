@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Services.UI
 import "I18n.js" as I18n
+import "Ui.js" as Ui
 
 Item {
   id: root
@@ -18,10 +19,12 @@ Item {
                                    : ({})
   readonly property var pluginSettings: pluginApi ? (pluginApi.pluginSettings || {}) : ({})
   readonly property string obsctlPath: pluginApi ? (pluginApi.pluginDir + "/scripts/obsctl") : ""
-  readonly property string openPathHelper: pluginApi ? (pluginApi.pluginDir + "/scripts/open-path") : ""
   readonly property string configuredVideosPath: pluginSettings.videosPath !== undefined
                                                  ? String(pluginSettings.videosPath).trim()
                                                  : String(defaults.videosPath !== undefined ? defaults.videosPath : "")
+  readonly property string videosOpener: pluginSettings.videosOpener !== undefined
+                                         ? String(pluginSettings.videosOpener).trim()
+                                         : String(defaults.videosOpener !== undefined ? defaults.videosOpener : "xdg-open")
   readonly property string videosPath: configuredVideosPath !== ""
                                        ? configuredVideosPath
                                        : (Quickshell.env("XDG_VIDEOS_DIR") || ((Quickshell.env("HOME") || "") + "/Videos"))
@@ -34,37 +37,72 @@ Item {
   readonly property string leftClickAction: pluginSettings.leftClickAction !== undefined
                                             ? String(pluginSettings.leftClickAction)
                                             : String(defaults.leftClickAction !== undefined ? defaults.leftClickAction : "panel")
+  readonly property string launchBehavior: pluginSettings.launchBehavior !== undefined
+                                           ? String(pluginSettings.launchBehavior)
+                                           : String(defaults.launchBehavior !== undefined ? defaults.launchBehavior : "minimized-to-tray")
+  readonly property string barLabelMode: pluginSettings.barLabelMode !== undefined
+                                         ? String(pluginSettings.barLabelMode)
+                                         : String(defaults.barLabelMode !== undefined ? defaults.barLabelMode : "short-label")
   readonly property bool showBarWhenRecording: pluginSettings.showBarWhenRecording !== undefined
                                                ? Boolean(pluginSettings.showBarWhenRecording)
                                                : Boolean(defaults.showBarWhenRecording)
   readonly property bool showBarWhenReplay: pluginSettings.showBarWhenReplay !== undefined
                                             ? Boolean(pluginSettings.showBarWhenReplay)
                                             : Boolean(defaults.showBarWhenReplay)
+  readonly property bool showBarWhenStreaming: pluginSettings.showBarWhenStreaming !== undefined
+                                               ? Boolean(pluginSettings.showBarWhenStreaming)
+                                               : Boolean(defaults.showBarWhenStreaming)
   readonly property bool showControlCenterWhenRecording: pluginSettings.showControlCenterWhenRecording !== undefined
                                                          ? Boolean(pluginSettings.showControlCenterWhenRecording)
                                                          : Boolean(defaults.showControlCenterWhenRecording)
   readonly property bool showControlCenterWhenReplay: pluginSettings.showControlCenterWhenReplay !== undefined
                                                       ? Boolean(pluginSettings.showControlCenterWhenReplay)
                                                       : Boolean(defaults.showControlCenterWhenReplay)
+  readonly property bool showControlCenterWhenStreaming: pluginSettings.showControlCenterWhenStreaming !== undefined
+                                                         ? Boolean(pluginSettings.showControlCenterWhenStreaming)
+                                                         : Boolean(defaults.showControlCenterWhenStreaming)
   readonly property bool showControlCenterWhenReady: pluginSettings.showControlCenterWhenReady !== undefined
                                                      ? Boolean(pluginSettings.showControlCenterWhenReady)
                                                      : Boolean(defaults.showControlCenterWhenReady)
+  readonly property bool autoCloseManagedObs: pluginSettings.autoCloseManagedObs !== undefined
+                                              ? Boolean(pluginSettings.autoCloseManagedObs)
+                                              : Boolean(defaults.autoCloseManagedObs !== undefined ? defaults.autoCloseManagedObs : true)
+  readonly property bool openVideosAfterStop: pluginSettings.openVideosAfterStop !== undefined
+                                              ? Boolean(pluginSettings.openVideosAfterStop)
+                                              : Boolean(defaults.openVideosAfterStop !== undefined ? defaults.openVideosAfterStop : true)
+  readonly property bool showElapsedInBar: pluginSettings.showElapsedInBar !== undefined
+                                           ? Boolean(pluginSettings.showElapsedInBar)
+                                           : Boolean(defaults.showElapsedInBar)
 
   property bool obsRunning: false
   property bool websocket: false
   property bool recording: false
   property bool replayBuffer: false
+  property bool streaming: false
   property int recordDurationMs: 0
+  property int streamDurationMs: 0
   property int displayRecordDurationMs: 0
+  property int displayStreamDurationMs: 0
   readonly property bool connected: obsRunning && websocket
-  readonly property bool showInBar: (recording && showBarWhenRecording)
-                                    || (replayBuffer && showBarWhenReplay)
-  readonly property bool showInControlCenter: (recording && showControlCenterWhenRecording)
-                                              || (replayBuffer && showControlCenterWhenReplay)
-                                              || (connected && showControlCenterWhenReady)
-  readonly property string primaryActionText: leftClickAction === "toggle-record"
-                                                ? tr("actions.primary.toggle_record", "toggles recording")
-                                                : tr("actions.primary.open_controls", "opens controls")
+  readonly property var outputState: ({
+    recording: recording,
+    replayBuffer: replayBuffer,
+    streaming: streaming,
+    recordDurationMs: recordDurationMs,
+    streamDurationMs: streamDurationMs,
+  })
+  readonly property var visibilitySettings: ({
+    showBarWhenRecording: showBarWhenRecording,
+    showBarWhenReplay: showBarWhenReplay,
+    showBarWhenStreaming: showBarWhenStreaming,
+    showControlCenterWhenRecording: showControlCenterWhenRecording,
+    showControlCenterWhenReplay: showControlCenterWhenReplay,
+    showControlCenterWhenStreaming: showControlCenterWhenStreaming,
+    showControlCenterWhenReady: showControlCenterWhenReady,
+  })
+  readonly property bool showInBar: Ui.shouldShowInBar(outputState, visibilitySettings)
+  readonly property bool showInControlCenter: Ui.shouldShowInControlCenter(outputState, visibilitySettings, connected)
+  readonly property string primaryActionText: Ui.primaryActionText(tr, leftClickAction)
 
   function tr(key, fallback, interpolations) {
     return I18n.tr(pluginApi, key, fallback, interpolations);
@@ -75,9 +113,12 @@ Item {
     websocket = Boolean(payload && payload.websocket);
     recording = Boolean(payload && payload.recording);
     replayBuffer = Boolean(payload && payload.replayBuffer);
+    streaming = Boolean(payload && payload.streaming);
     recordDurationMs = Math.max(0, Number(payload && payload.recordDurationMs ? payload.recordDurationMs : 0));
+    streamDurationMs = Math.max(0, Number(payload && payload.streamDurationMs ? payload.streamDurationMs : 0));
     displayRecordDurationMs = recording ? recordDurationMs : 0;
-    displayTimer.running = recording;
+    displayStreamDurationMs = streaming ? streamDurationMs : 0;
+    displayTimer.running = recording || streaming;
   }
 
   function resetStatus() {
@@ -86,7 +127,9 @@ Item {
       "websocket": false,
       "recording": false,
       "replayBuffer": false,
-      "recordDurationMs": 0
+      "streaming": false,
+      "recordDurationMs": 0,
+      "streamDurationMs": 0
     });
   }
 
@@ -115,13 +158,17 @@ Item {
     runAction("toggle-replay");
   }
 
+  function toggleStream() {
+    runAction("toggle-stream");
+  }
+
   function saveReplay() {
     runAction("save-replay");
   }
 
   function openVideos() {
-    if (videosPath !== "") {
-      Quickshell.execDetached([openPathHelper, videosPath]);
+    if (videosPath !== "" && videosOpener !== "") {
+      Quickshell.execDetached([videosOpener, videosPath]);
     }
   }
 
@@ -135,63 +182,13 @@ Item {
       return;
     }
 
-    const actionLabel = payload.openVideos ? tr("toast.actions.open_videos", "Open Videos") : "";
-    const actionCallback = payload.openVideos ? function () { root.openVideos(); } : null;
+    const actionLabel = payload.openVideos && openVideosAfterStop ? tr("toast.actions.open_videos", "Open Videos") : "";
+    const actionCallback = payload.openVideos && openVideosAfterStop ? function () { root.openVideos(); } : null;
     ToastService.showNotice(translated.title, translated.body, "", 3200, actionLabel, actionCallback);
   }
 
   function translatedActionPayload(payload) {
-    if (!payload) {
-      return { title: "", body: "" };
-    }
-
-    switch (payload.event) {
-    case "record-started":
-      return {
-        title: tr("toast.record_started.title", "OBS recording started"),
-        body: tr("toast.record_started.body", "Local recording is running."),
-      };
-    case "record-started-launch":
-      return {
-        title: tr("toast.record_started_launch.title", "OBS recording started"),
-        body: tr("toast.record_started_launch.body", "OBS launched in the tray."),
-      };
-    case "record-stopped":
-      return {
-        title: tr("toast.record_stopped.title", "OBS recording stopped"),
-        body: tr("toast.record_stopped.body", "Recording saved to Videos."),
-      };
-    case "replay-started":
-      return {
-        title: tr("toast.replay_started.title", "OBS replay buffer started"),
-        body: tr("toast.replay_started.body", "Replay buffer is active."),
-      };
-    case "replay-started-launch":
-      return {
-        title: tr("toast.replay_started_launch.title", "OBS replay buffer started"),
-        body: tr("toast.replay_started_launch.body", "OBS launched in the tray."),
-      };
-    case "replay-stopped":
-      return {
-        title: tr("toast.replay_stopped.title", "OBS replay buffer stopped"),
-        body: tr("toast.replay_stopped.body", "Instant replay is off."),
-      };
-    case "replay-saved":
-      return {
-        title: tr("toast.replay_saved.title", "OBS replay saved"),
-        body: tr("toast.replay_saved.body", "Saved the last replay buffer to Videos."),
-      };
-    case "offline":
-      return {
-        title: tr("toast.offline.title", "OBS is offline"),
-        body: tr("toast.offline.body", "Launch OBS to use recording controls."),
-      };
-    default:
-      return {
-        title: payload.title || "",
-        body: payload.body || "",
-      };
-    }
+    return Ui.toastPayload(tr, payload);
   }
 
   function showProcessErrorToast(detail) {
@@ -220,7 +217,12 @@ Item {
 
   function runPrimaryAction(screen, anchorItem) {
     if (leftClickAction === "toggle-record") {
-      runSecondaryAction();
+      toggleRecord();
+      return;
+    }
+
+    if (leftClickAction === "toggle-stream") {
+      toggleStream();
       return;
     }
 
@@ -271,11 +273,23 @@ Item {
     onTriggered: {
       if (!root.recording) {
         root.displayRecordDurationMs = 0;
+      }
+
+      if (!root.streaming) {
+        root.displayStreamDurationMs = 0;
+      }
+
+      if (!root.recording && !root.streaming) {
         running = false;
         return;
       }
 
-      root.displayRecordDurationMs += 1000;
+      if (root.recording) {
+        root.displayRecordDurationMs += 1000;
+      }
+      if (root.streaming) {
+        root.displayStreamDurationMs += 1000;
+      }
     }
   }
 
@@ -302,6 +316,10 @@ Item {
       root.toggleReplay();
     }
 
+    function toggleStream() {
+      root.toggleStream();
+    }
+
     function saveReplay() {
       root.saveReplay();
     }
@@ -312,7 +330,11 @@ Item {
 
     function primaryAction() {
       if (root.leftClickAction === "toggle-record") {
-        root.runSecondaryAction();
+        root.toggleRecord();
+        return;
+      }
+      if (root.leftClickAction === "toggle-stream") {
+        root.toggleStream();
         return;
       }
       root.togglePanelFromIpc();
@@ -330,7 +352,14 @@ Item {
   Process {
     id: actionProcess
     running: false
-    command: pendingAction === "" ? [] : [root.obsctlPath, pendingAction]
+    command: pendingAction === ""
+             ? []
+             : [
+                 root.obsctlPath,
+                 "--launch-behavior", root.launchBehavior,
+                 "--auto-close-managed", root.autoCloseManagedObs ? "true" : "false",
+                 pendingAction
+               ]
     stdout: StdioCollector {}
     stderr: StdioCollector {}
 

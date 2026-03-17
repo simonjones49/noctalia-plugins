@@ -3,7 +3,7 @@
     "name": "OBS Control",
     "version": "0.1.0",
     "author": "ayagmar",
-    "description": "OBS recording and replay status widget for Noctalia.",
+    "description": "OBS recording, replay, and stream status widget for Noctalia.",
     "tags": ["Bar", "Panel", "Indicator", "Utility"],
     "entryPoints": {
         "main": "Main.qml",
@@ -24,12 +24,20 @@
         "defaultSettings": {
             "pollIntervalMs": 2500,
             "leftClickAction": "panel",
+            "launchBehavior": "minimized-to-tray",
+            "barLabelMode": "short-label",
             "videosPath": "",
+            "videosOpener": "xdg-open",
+            "autoCloseManagedObs": true,
+            "openVideosAfterStop": true,
             "showBarWhenRecording": true,
             "showBarWhenReplay": false,
+            "showBarWhenStreaming": true,
             "showControlCenterWhenRecording": true,
             "showControlCenterWhenReplay": true,
-            "showControlCenterWhenReady": false
+            "showControlCenterWhenStreaming": true,
+            "showControlCenterWhenReady": false,
+            "showElapsedInBar": false
         }
     }
 }
