@@ -129,9 +129,9 @@ Item {
         root.deleteNote(noteId);
       }
 
-      onExpandRequested: function(noteId, content, noteColor, modifiedStr, modified) {
+      onExpandRequested: function(noteId, content, noteColor) {
         if (root.pluginApi?.mainInstance && root.pluginApi?.panelOpenScreen) {
-          root.pluginApi.mainInstance.openExpandedNote(root.pluginApi.panelOpenScreen, noteId, content, noteColor, modifiedStr, modified);
+          root.pluginApi.mainInstance.openExpandedNote(root.pluginApi.panelOpenScreen, noteId, content, noteColor);
         }
       }
     }

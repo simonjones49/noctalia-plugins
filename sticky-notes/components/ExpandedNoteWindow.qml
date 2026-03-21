@@ -12,8 +12,6 @@ Item {
   required property string noteId
   required property string content
   required property string noteColor
-  required property string modifiedStr
-  property string absoluteModifiedStr: ""
   property var pluginApi: null
   property bool editing: false
 
@@ -236,7 +234,7 @@ Item {
                   root.saveCurrent();
                   event.accepted = true;
                 } else if (event.key === Qt.Key_Escape) {
-                  root.editing = false;
+                  root.saveCurrent();
                   event.accepted = true;
                 }
               }

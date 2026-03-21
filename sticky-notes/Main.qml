@@ -16,10 +16,6 @@ Item {
   property double lastSyncAt: 0
   property var expandedScreen: null
   property string expandedNoteId: ""
-  property string expandedContent: ""
-  property string expandedColor: ""
-  property string expandedModifiedStr: ""
-  property double expandedModified: 0
   signal notesChanged()
 
   // Internal cache for parsed and formatted notes
@@ -127,10 +123,8 @@ Item {
     persistNotes(notes);
 
     if (expandedNoteId === noteId) {
-      expandedContent = content;
-      expandedColor = note.color;
-      expandedModifiedStr = Storage.formatDate(new Date(now), root.pluginApi);
-      expandedModified = now;
+      // expanded view is already synced by property bindings in ExpandedPanelWindow,
+      // but if we were tracking more here we would update it.
     }
 
     Logger.i("StickyNotes", "Note saved: " + noteId);
@@ -155,24 +149,16 @@ Item {
     Logger.i("StickyNotes", "Note deleted: " + noteId);
   }
 
-  function openExpandedNote(screen, noteId, content, noteColor, modifiedStr, modified) {
+  function openExpandedNote(screen, noteId, content, noteColor) {
     expandedScreen = screen;
     expandedNoteId = noteId;
-    expandedContent = content;
-    expandedColor = noteColor || "#FFF9C4";
-    expandedModifiedStr = modifiedStr || "";
-    expandedModified = modified || 0;
-    expandedWindow.openFor(screen, noteId, content, noteColor || "#FFF9C4", modifiedStr || "", modified || 0);
+    expandedWindow.openFor(screen, noteId, content, noteColor || "#FFF9C4");
   }
 
   function closeExpandedNote() {
     expandedWindow.closeWindow();
     expandedScreen = null;
     expandedNoteId = "";
-    expandedContent = "";
-    expandedColor = "";
-    expandedModifiedStr = "";
-    expandedModified = 0;
   }
 
   function hasSyncToken() {
@@ -257,13 +243,9 @@ Item {
       root.saveNote(noteId, content, noteColor);
     }
 
-    onClosed: {
+    onNoteWindowClosed: {
       root.expandedScreen = null;
       root.expandedNoteId = "";
-      root.expandedContent = "";
-      root.expandedColor = "";
-      root.expandedModifiedStr = "";
-      root.expandedModified = 0;
     }
   }
 }

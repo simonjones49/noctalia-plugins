@@ -16,7 +16,6 @@ Rectangle {
   required property string content
   required property string noteColor
   required property string modifiedStr
-  required property double modified
 
   // Parent-provided state
   property int editingIndex: -1
