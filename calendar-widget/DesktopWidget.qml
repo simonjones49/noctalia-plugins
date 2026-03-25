@@ -56,10 +56,10 @@ DraggableDesktopWidget {
     readonly property int daysInMonth: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()
     
     function isToday(dayNum) {
-        let now = new Date();
-        return dayNum === now.getDate() && 
-               currentDate.getMonth() === now.getMonth() && 
-               currentDate.getFullYear() === now.getFullYear();
+        let today = new Date();
+        return dayNum === today.getDate() && 
+               currentDate.getMonth() === today.getMonth() && 
+               currentDate.getFullYear() === today.getFullYear();
     }
 
     // --- UI Layout ---
@@ -113,7 +113,9 @@ DraggableDesktopWidget {
                     model: root.daysInMonth
                     Rectangle {
                         readonly property int dayNum: index + 1
-                        readonly property bool highlight: root.isToday(dayNum)
+                        // We link highlight to currentDate to force a re-evaluation
+                        readonly property bool highlight: root.isToday(dayNum) || root.currentDate 
+                        
                         Layout.preferredWidth: 28 * widgetScale
                         Layout.preferredHeight: 28 * widgetScale
                         color: highlight ? Color.mPrimary : "transparent"
