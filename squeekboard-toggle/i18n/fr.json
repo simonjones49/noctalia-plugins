@@ -1,0 +1,9 @@
+{
+  "tooltip": {
+    "active": "Clavier actif",
+    "hidden": "Clavier masqué"
+  },
+  "menu": {
+    "settings": "Paramètres du widget"
+  }
+}
