@@ -60,7 +60,7 @@ jobs:
             local priority=$1
             local property=$2
             local code_line=$3
-            printf -- '\n- %s Missing required property: %s. For example:\n```qml\n%s\n```' "$priority" "$property" "$code_line"
+            printf -- '\n- %s Missing required property `%s`. For example:\n```qml\n%s\n```' "$priority" "$property" "$code_line"
           }
 
           title_added=false
