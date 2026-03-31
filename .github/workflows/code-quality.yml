@@ -40,7 +40,7 @@ jobs:
             exit 0
           fi
 
-          comment_body=$(printf -- '## Automatic Code Quality Review')
+          comment_body=$(printf -- '### Automatic Code Quality Review')
 
           issues=0
           line_index=0
