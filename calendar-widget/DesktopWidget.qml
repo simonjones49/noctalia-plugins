@@ -118,13 +118,13 @@ DraggableDesktopWidget {
                         Layout.preferredWidth: 28 * widgetScale
                         Layout.preferredHeight: 28 * widgetScale
 
-                        color: isActuallyToday ? Color.mPrimary
+                        color: isActuallyToday ? Color.mPrimary : "transparent"
                         radius: Style.radiusS
 
                         NText {
                             anchors.centerIn: parent
                             text: dayNum
-                            color: isActuallyToday ? Color.mPrimary : "transparent"
+                            color: isActuallyToday ? Color.mOnPrimary : Color.mOnSurface
                             font.bold: isActuallyToday
                             font.pointSize: Style.fontSizeS
                         }
